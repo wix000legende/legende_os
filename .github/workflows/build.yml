@@ -1,4 +1,4 @@
- name: Compile AOSP Fast
+name: Compile AOSP Fast
 
 on:
   workflow_dispatch:
