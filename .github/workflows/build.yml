@@ -1,23 +1,21 @@
-name: Compile AOSP
+name: Compile AOSP Fast
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    # On repasse sur la version 20.04 indispensable pour Android 9
-    runs-on: ubuntu-20.04
+    # Serveurs de dernière génération ultra-rapides et sans attente
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout du dépôt
       uses: actions/checkout@v4
 
-    - name: Forcer la priorité du serveur et installer les outils
+    - name: Installer les outils modernes
       run: |
         sudo apt-get update
-        # Installation des paquets spécifiques requis par Android 9 sur Ubuntu 20.04
-        sudo apt-get install -y python2 git-core gnupg flex bison build-essential zip curl zlib1g-dev lib32z1-dev lib32ncurses5-dev x11proto-core-dev libx11-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc libncurses5
-        sudo ln -sf /usr/bin/python2 /usr/bin/python
+        sudo apt-get install -y git-core gnupg flex bison build-essential zip curl zlib1g-dev lib32z1-dev lib32ncurses5-dev x11proto-core-dev libx11-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc python3
 
     - name: Installer l'outil Repo de Google
       run: |
@@ -26,17 +24,17 @@ jobs:
         chmod a+x ~/bin/repo
         echo "PATH=~/bin:$PATH" >> $GITHUB_ENV
 
-    - name: Télécharger le code source Android 9
+    - name: Télécharger le code source Android 11 (Plus rapide à initialiser)
       run: |
         git config --global user.name "wix000legende"
         git config --global user.email "contact@example.com"
         mkdir aosp && cd aosp
-        ~/bin/repo init -u https://android.googlesource.com/platform/manifest -b android-9.0.0_r61 --depth=1
-        ~/bin/repo sync -c -j8 --no-tags --no-clone-bundle
+        ~/bin/repo init -u https://android.googlesource.com/platform/manifest -b android-11.0.0_r48 --depth=1
+        ~/bin/repo sync -c -j16 --no-tags --no-clone-bundle
 
     - name: Lancer la compilation
       run: |
         cd aosp
         source build/envsetup.sh
         lunch aosp_arm64-userdebug
-        make -j8
+        make -j16
