@@ -29,7 +29,6 @@ jobs:
         git config --global user.email "contact@example.com"
         mkdir aosp && cd aosp
         ~/bin/repo init -u https://android.googlesource.com/platform/manifest -b android-11.0.0_r48 --depth=1
-        # On passe à -j4 ici pour éviter de se faire bloquer par Google (Erreur 429)
         ~/bin/repo sync -c -j4 --no-tags --no-clone-bundle
 
     - name: Lancer la compilation
@@ -37,6 +36,4 @@ jobs:
         cd aosp
         source build/envsetup.sh
         lunch aosp_arm64-userdebug
-        # On remet le turbo -j16 pour que la compilation aille super vite !
         make -j16
-
