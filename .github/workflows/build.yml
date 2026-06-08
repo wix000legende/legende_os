@@ -1,52 +1,41 @@
-name: Compile AOSP Fast
+name: Compile Legende OS
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout du dépôt
-      uses: actions/checkout@v4
+      - name: Checkout du dépôt
+        uses: actions/checkout@v3
 
-    - name: Libérer de l'espace disque sur le serveur GitHub
-      run: |
-        echo "=== Avant nettoyage ==="
-        df -h
-        # Suppression des gros outils inutiles préinstallés par GitHub
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /usr/local/lib/android
-        sudo rm -rf /opt/ghc
-        sudo rm -rf "/usr/local/share/boost"
-        echo "=== Après nettoyage ==="
-        df -h
+      - name: Installer les outils nécessaires
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev libelf-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev
 
-    - name: Installer les outils nécessaires
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y git-core gnupg flex bison build-essential zip curl zlib1g-dev libx11-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc python3 lsb-release libncurses5
+      - name: Installer l'outil Repo
+        run: |
+          mkdir -p ~/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+          echo "$HOME/bin" >> $GITHUB_PATH
 
-    - name: Installer l'outil Repo de Google
-      run: |
-        mkdir -p ~/bin
-        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
-        chmod a+x ~/bin/repo
-        echo "PATH=~/bin:$PATH" >> $GITHUB_ENV
+      - name: Télécharger le code source
+        run: |
+          mkdir workspace
+          cd workspace
+          repo init -u https://android.googlesource.com/platform/manifest -b android-14.0.0_r1
+          repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune --force-sync -j4
 
-    - name: Télécharger le code source (Version Ultra-Légère)
-      run: |
-        git config --global user.name "wix000legende"
-        git config --global user.email "contact@example.com"
-        mkdir aosp && cd aosp
-        # On télécharge uniquement le strict minimum pour compiler
-        ~/bin/repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --depth=1 && repo sync -c -j8 --no-tags --no-clone-bundle
-
-    - name: Lancer la compilation
-      run: |
-        cd aosp
-        source build/envsetup.sh
-        lunch lineage_arm64-userdebug
-        # On baisse à -j4 pour éviter que la mémoire vive (RAM) du serveur ne sature
-        make -j4
+      - name: Lancer la compilation
+        run: |
+          cd workspace
+          source build/envsetup.sh
+          lunch aosp_arm64-eng
+          # On limite le parallélisme à 2 pour éviter le crash mémoire
+          export LC_ALL=C
+          make -j2
