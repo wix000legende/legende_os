@@ -11,6 +11,18 @@ jobs:
     - name: Checkout du dépôt
       uses: actions/checkout@v4
 
+    - name: Libérer de l'espace disque sur le serveur GitHub
+      run: |
+        echo "=== Avant nettoyage ==="
+        df -h
+        # Suppression des gros outils inutiles préinstallés par GitHub
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf "/usr/local/share/boost"
+        echo "=== Après nettoyage ==="
+        df -h
+
     - name: Installer les outils nécessaires
       run: |
         sudo apt-get update
@@ -23,19 +35,18 @@ jobs:
         chmod a+x ~/bin/repo
         echo "PATH=~/bin:$PATH" >> $GITHUB_ENV
 
-    - name: Télécharger le code source (Via Miroir stable)
+    - name: Télécharger le code source (Version Ultra-Légère)
       run: |
         git config --global user.name "wix000legende"
         git config --global user.email "contact@example.com"
         mkdir aosp && cd aosp
-        # Utilisation du miroir officiel de LineageOS pour Android 11 (beaucoup plus robuste et rapide)
-        ~/bin/repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --depth=1
-        ~/bin/repo sync -c -j8 --no-tags --no-clone-bundle
+        # On télécharge uniquement le strict minimum pour compiler
+        ~/bin/repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --depth=1 && repo sync -c -j8 --no-tags --no-clone-bundle
 
     - name: Lancer la compilation
       run: |
         cd aosp
         source build/envsetup.sh
-        # On utilise le build générique propre à ce miroir
         lunch lineage_arm64-userdebug
-        make -j16
+        # On baisse à -j4 pour éviter que la mémoire vive (RAM) du serveur ne sature
+        make -j4
