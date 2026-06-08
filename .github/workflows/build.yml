@@ -37,8 +37,10 @@ jobs:
         run: |
           mkdir workspace
           cd workspace
-          repo init -u https://android.googlesource.com/platform/manifest -b android-14.0.0_r1
-          repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune --force-sync -j8
+          # Utilisation de la branche stable Android 13
+          repo init -u https://android.googlesource.com/platform/manifest -b android-13.0.0_r74
+          # Téléchargement stable avec -j2
+          repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune --force-sync -j2
 
       - name: Lancer la compilation
         run: |
@@ -46,5 +48,5 @@ jobs:
           source build/envsetup.sh
           lunch aosp_arm64-eng
           export LC_ALL=C
-          # Grâce au swap, on peut maintenant utiliser plus de puissance !
+          # Compilation utilisant le swap pour éviter les erreurs Out of Memory
           make -j8
