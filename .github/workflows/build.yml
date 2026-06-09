@@ -12,6 +12,7 @@ jobs:
 
       - name: Cleanup & Prepare Space
         run: |
+          # Suppression des outils lourds inutiles pour libérer de l'espace disque
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost /usr/local/lib/node_modules
           sudo apt-get clean
           df -h
@@ -29,13 +30,15 @@ jobs:
           export PATH=~/bin:$PATH
           mkdir android_build
           cd android_build
+          # Utilisation du miroir LineageOS avec options de tolérance réseau
           repo init -u https://github.com/LineageOS/android.git -b lineage-20.0 --depth=1
-          repo sync -c --no-tags --no-clone-bundle -j$(nproc)
+          # Ajout de --retry pour éviter les échecs lors des micro-coupures
+          repo sync -c --no-tags --no-clone-bundle -j$(nproc) --retry 5
 
       - name: Build Legende OS
         run: |
           cd android_build
           source build/envsetup.sh
-          # On sélectionne la cible n°50 (sdk_pc_x86_64-userdebug) sans intervention humaine
-          echo "50" | lunch
+          # Lancement direct du build sans menu interactif
+          lunch lineage_sdk_phone_x86_64-userdebug
           mka -j$(nproc)
