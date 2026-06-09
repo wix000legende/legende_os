@@ -36,6 +36,6 @@ jobs:
         run: |
           cd android_build
           source build/envsetup.sh
-          # Tentative avec la cible standard Lineage x86_64
-          lunch lineage_x86_64-userdebug || lunch
+          # On sélectionne la cible n°50 (sdk_pc_x86_64-userdebug) sans intervention humaine
+          echo "50" | lunch
           mka -j$(nproc)
