@@ -12,7 +12,6 @@ jobs:
 
       - name: Cleanup & Prepare Space
         run: |
-          # Suppression des outils lourds inutiles pour libérer de l'espace
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost /usr/local/lib/node_modules
           sudo apt-get clean
           df -h
@@ -30,7 +29,6 @@ jobs:
           export PATH=~/bin:$PATH
           mkdir android_build
           cd android_build
-          # Utilisation du miroir LineageOS
           repo init -u https://github.com/LineageOS/android.git -b lineage-20.0 --depth=1
           repo sync -c --no-tags --no-clone-bundle -j$(nproc)
 
@@ -38,6 +36,6 @@ jobs:
         run: |
           cd android_build
           source build/envsetup.sh
-          # Configuration identifiée comme valide
-          lunch sdk_pc_x86_64-userdebug
+          # Tentative avec la cible standard Lineage x86_64
+          lunch lineage_x86_64-userdebug || lunch
           mka -j$(nproc)
