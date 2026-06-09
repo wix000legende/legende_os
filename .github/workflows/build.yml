@@ -36,6 +36,6 @@ jobs:
         run: |
           cd android_build
           source build/envsetup.sh
-          # Cible universelle pour émulateur
-          lunch aosp_x86_64-userdebug
+          # Cible correcte pour les sources LineageOS
+          lunch lineage_x86_64-userdebug
           mka -j$(nproc)
