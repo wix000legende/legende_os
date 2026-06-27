@@ -1,48 +1,64 @@
 name: Build AOSP x86_64 for VirtualBox
 
 on:
-  workflow_dispatch: # Lance uniquement quand vous cliquez sur le bouton
+  workflow_dispatch: # Lance uniquement manuellement
 
 jobs:
   build:
-    runs-on: ubuntu-22.04 # Spécifique pour Android 11
-    timeout-minutes: 360  # Limite de 6 heures (max gratuit)
+    runs-on: ubuntu-22.04 # Version stable et rapide pour Android 11
+    timeout-minutes: 360  # Limite de 6 heures
 
     steps:
-      # 1. Récupère votre code
+      # 1. Récupération du code source du dépôt
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Installe les outils de compilation Android
+      # 2. Installation des dépendances système
       - name: Setup Environment
         run: |
           sudo apt-get update
-          sudo apt-get install -y repo curl git python3 bc bison build-essential ccache flex gperf libxml2-utils wget zip unzip openjdk-11-jdk
+          sudo apt-get install -y \
+            bc bison build-essential ccache curl flex g++-multilib gcc-multilib \
+            git gnupg gperf lib32ncurses5-dev lib32readline-dev lib32z1-dev \
+            liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libxml2 \
+            libxml2-utils lzop pngcrush rsync schedtool squashfs-tools \
+            xsltproc zip zlib1g-dev wget unzip python3 openjdk-11-jdk
+          
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-      # 3. Télécharge le code source d'Android 11
+      # 3. Installation de la version RÉCENTE de l'outil 'repo' (Correction erreur --git-lfs)
+      - name: Install Latest Repo Tool
+        run: |
+          mkdir -p ~/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+          echo "$HOME/bin" >> $GITHUB_PATH
+          repo --version
+
+      # 4. Nettoyage disque pour gagner de l'espace (Critique pour AOSP)
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /usr/local/lib/android "$AGENT_TOOLSDIRECTORY"
+          sudo docker image prune -a -f
+          sudo apt-get clean
+          df -h
+
+      # 5. Initialisation du dépôt AOSP (Android 11)
       - name: Initialize Repo
         run: |
           mkdir -p workspace
           cd workspace
+          # Utilisation de --git-lfs maintenant supporté par la version récente de repo
           repo init -u https://android.googlesource.com/platform/manifest -b android-11.0.0_r48 --git-lfs --depth=1
 
-      # 4. (Optionnel) Ajoutez vos modifications si vous avez un fichier roomservice.xml
-      - name: Setup Local Manifest
-        run: |
-          cd workspace
-          mkdir -p .repo/local_manifests
-          # Décommentez la ligne suivante si vous avez créé un fichier roomservice.xml dans votre dépôt
-          # curl -o .repo/local_manifests/roomservice.xml https://raw.githubusercontent.com/VOTRE_PSEUDO/VOTRE_DEPOT/main/roomservice.xml
-
-      # 5. Synchronise tout le code (Étape la plus longue)
+      # 6. Synchronisation du code source (Étape la plus longue)
       - name: Sync Repo
         run: |
           cd workspace
           repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
 
-      # 6. Configure pour PC (x86_64) et non pour téléphone
+      # 7. Configuration de l'environnement de build (Cible x86_64 pour VirtualBox)
       - name: Setup Build Target
         run: |
           cd workspace
@@ -52,21 +68,22 @@ jobs:
           export CCACHE_EXEC=/usr/bin/ccache
           ccache -M 10G
 
-      # 7. Lance la compilation
+      # 8. Compilation de l'image système
       - name: Build AOSP
         run: |
           cd workspace
           mka image -j$(nproc --all)
 
-      # 8. Prépare les fichiers pour VirtualBox
+      # 9. Préparation des fichiers pour VirtualBox
       - name: Prepare Artifacts
         run: |
           mkdir -p output_vbox
           cp workspace/out/target/product/x86_64/system.img output_vbox/
           cp workspace/out/target/product/x86_64/kernel output_vbox/
           cp workspace/out/target/product/x86_64/ramdisk.img output_vbox/
+          echo "Build completed successfully. Download these files to use in VirtualBox." > output_vbox/README.txt
 
-      # 9. Vous permet de télécharger le résultat
+      # 10. Upload des résultats pour téléchargement
       - name: Upload Build
         uses: actions/upload-artifact@v4
         with:
