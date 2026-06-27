@@ -9,67 +9,22 @@ jobs:
     timeout-minutes: 360
 
     steps:
+      # 1. Récupération du code source du dépôt
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2. Installation des dépendances système
       - name: Setup Environment
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev wget unzip python3 openjdk-11-jdk
+          sudo apt-get install -y \
+            bc bison build-essential ccache curl flex g++-multilib gcc-multilib \
+            git gnupg gperf lib32ncurses5-dev lib32readline-dev lib32z1-dev \
+            liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libxml2 \
+            libxml2-utils lzop pngcrush rsync schedtool squashfs-tools \
+            xsltproc zip zlib1g-dev wget unzip python3 openjdk-11-jdk
+          
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Install Latest Repo Tool
-        run: |
-          mkdir -p ~/bin
-          curl --fail --location --output ~/bin/repo https://storage.googleapis.com/git-repo-downloads/repo
-          chmod a+x ~/bin/repo
-          echo "$HOME/bin" >> $GITHUB_PATH
-          repo --version
-
-      - name: Free up disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /usr/local/lib/android "$AGENT_TOOLSDIRECTORY"
-          sudo docker image prune -a -f
-          sudo apt-get clean
-          df -h
-
-      - name: Initialize Repo
-        run: |
-          mkdir -p workspace
-          cd workspace
-          repo init -u https://android.googlesource.com/platform/manifest -b android-11.0.0_r48 --git-lfs --depth=1
-
-      - name: Sync Repo
-        run: |
-          cd workspace
-          repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
-
-      - name: Setup Build Target
-        run: |
-          cd workspace
-          source build/envsetup.sh
-          lunch aosp_x86_64-eng
-          export USE_CCACHE=1
-          export CCACHE_EXEC=/usr/bin/ccache
-          ccache -M 10G
-
-      - name: Build AOSP
-        run: |
-          cd workspace
-          mka image -j$(nproc --all)
-
-      - name: Prepare Artifacts
-        run: |
-          mkdir -p output_vbox
-          cp workspace/out/target/product/x86_64/system.img output_vbox/
-          cp workspace/out/target/product/x86_64/kernel output_vbox/
-          cp workspace/out/target/product/x86_64/ramdisk.img output_vbox/
-          echo "Build successful!" > output_vbox/README.txt
-
-      - name: Upload Build
-        uses: actions/upload-artifact@v4
-        with:
-          name: AOSP-x86_64-Android11
-          path: output_vbox/
-          retention-days: 5   
+      # 3. Nettoyage disque pour gagner de l'espace (C   
